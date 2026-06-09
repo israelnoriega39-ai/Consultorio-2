@@ -8,7 +8,14 @@
 <meta name="apple-mobile-web-app-title" content="Consultorio">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0D9488">
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="data:application/json,{
+  &quot;name&quot;: &quot;Consultorio&quot;,
+  &quot;short_name&quot;: &quot;Consultorio&quot;,
+  &quot;start_url&quot;: &quot;.&quot;,
+  &quot;display&quot;: &quot;standalone&quot;,
+  &quot;background_color&quot;: &quot;%23F8FAFC&quot;,
+  &quot;theme_color&quot;: &quot;%230D9488&quot;
+}">
 <title>Consultorio — Historia Clínica</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -320,9 +327,9 @@ function doInstall(){
 }
 function dismissInstall(){document.getElementById('installBanner').style.display='none';}
 
-// service worker
+// offline via cache API
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  navigator.serviceWorker.getRegistrations().then(regs=>{regs.forEach(r=>r.unregister());});
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
