@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Consultorio">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0D9488">
+<link rel="manifest" href="manifest.json">
+<title>Consultorio — Historia Clínica</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --teal:#0D9488;--teal-d:#0F766E;--teal-l:#CCFBF1;--teal-xl:#F0FDFA;
+  --gray-50:#F8FAFC;--gray-100:#F1F5F9;--gray-200:#E2E8F0;
+  --gray-400:#94A3B8;--gray-600:#475569;--gray-800:#1E293B;
+  --red:#EF4444;--white:#FFFFFF;
+  --r:12px;--sh:0 1px 3px rgba(0,0,0,.08),0 1px 8px rgba(0,0,0,.05);
+  --sh-md:0 4px 16px rgba(0,0,0,.10);
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--gray-50);color:var(--gray-800);display:flex;flex-direction:column}
+.topbar{background:var(--white);border-bottom:1px solid var(--gray-200);padding:0 16px;height:58px;display:flex;align-items:center;gap:10px;flex-shrink:0;position:relative;z-index:10}
+.logo{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.logo-icon{width:32px;height:32px;background:var(--teal);border-radius:9px;display:flex;align-items:center;justify-content:center}
+.logo-icon svg{color:#fff}
+.logo-name{font-size:16px;font-weight:700;letter-spacing:-.3px}
+.search{flex:1;background:var(--gray-100);border:1.5px solid transparent;border-radius:50px;padding:8px 14px;font-size:14px;color:var(--gray-800);outline:none;transition:border-color .15s,background .15s;min-width:0}
+.search::placeholder{color:var(--gray-400)}
+.search:focus{background:var(--white);border-color:var(--teal)}
+.sync-btn{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:5px 10px;border-radius:50px;white-space:nowrap;cursor:pointer;border:none;flex-shrink:0;transition:background .15s}
+.sync-btn.online{background:var(--teal-l);color:var(--teal-d)}
+.sync-btn.offline{background:var(--gray-200);color:var(--gray-600)}
+.sync-dot{width:7px;height:7px;border-radius:50%}
+.sync-btn.online .sync-dot{background:var(--teal)}
+.sync-btn.offline .sync-dot{background:var(--gray-400)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.sync-btn.syncing .sync-dot{animation:pulse 1s infinite;background:var(--teal)}
+.main{flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.stat{background:var(--white);border-radius:var(--r);padding:12px 14px;box-shadow:var(--sh)}
+.stat-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-400)}
+.stat-val{font-size:24px;font-weight:800;color:var(--gray-800);line-height:1.1;margin-top:2px}
+.toolbar{display:flex;align-items:center;margin-bottom:14px;gap:10px}
+.toolbar-lbl{flex:1;font-size:14px;font-weight:600;color:var(--gray-600)}
+.btn-new{background:var(--teal);color:#fff;border:none;border-radius:50px;padding:9px 16px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;transition:background .15s;white-space:nowrap}
+.btn-new:active{background:var(--teal-d)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.card{background:var(--white);border-radius:var(--r);padding:14px;box-shadow:var(--sh);cursor:pointer;border:1.5px solid transparent;transition:box-shadow .15s,border-color .15s;display:flex;flex-direction:column;gap:9px}
+.card:active{border-color:var(--teal-l);box-shadow:var(--sh-md)}
+.card-head{display:flex;align-items:flex-start;gap:10px}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--teal-l);color:var(--teal-d);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0}
+.card-name{font-size:14px;font-weight:700;line-height:1.2}
+.card-meta{font-size:11px;color:var(--gray-400);margin-top:2px}
+.card-diag{font-size:12px;color:var(--gray-600);line-height:1.4}
+.card-foot{display:flex;align-items:center;justify-content:space-between}
+.card-date{font-size:11px;color:var(--gray-400)}
+.visits-chip{font-size:11px;font-weight:700;background:var(--teal-xl);color:var(--teal-d);border-radius:20px;padding:2px 8px}
+.empty{text-align:center;padding:48px 20px;color:var(--gray-400);grid-column:1/-1}
+.empty p{margin-top:10px;font-size:13px;line-height:1.6}
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.overlay.open{opacity:1;pointer-events:all}
+@media(min-width:600px){.overlay{align-items:center}}
+.sheet{background:var(--white);width:100%;max-width:680px;max-height:92vh;border-radius:20px 20px 0 0;display:flex;flex-direction:column;transform:translateY(32px);transition:transform .22s;overflow:hidden}
+.overlay.open .sheet{transform:translateY(0)}
+@media(min-width:600px){.sheet{border-radius:16px;margin:16px}}
+.sheet-header{padding:16px 18px 14px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:10px;flex-shrink:0;background:var(--white)}
+.sheet-title{font-size:16px;font-weight:700;flex:1}
+.ico-btn{background:var(--gray-100);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray-600);flex-shrink:0;transition:background .15s}
+.ico-btn:active{background:var(--gray-200)}
+.ico-btn.danger:active{background:#FEE2E2;color:var(--red)}
+.sheet-body{overflow-y:auto;flex:1;padding:16px 18px 20px;-webkit-overflow-scrolling:touch}
+.sec-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--teal);margin-bottom:10px;margin-top:20px;display:flex;align-items:center;gap:6px}
+.sec-title:first-child{margin-top:0}
+.row{display:grid;gap:10px;margin-bottom:10px}
+.row.c2{grid-template-columns:1fr 1fr}
+.row.c1{grid-template-columns:1fr}
+@media(max-width:480px){.row.c2{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:11px;font-weight:700;color:var(--gray-600);letter-spacing:.2px}
+.field input,.field select,.field textarea{background:var(--gray-50);border:1.5px solid var(--gray-200);border-radius:8px;padding:9px 11px;font-size:14px;color:var(--gray-800);outline:none;font-family:inherit;resize:vertical;transition:border-color .15s;width:100%}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--teal);background:var(--white)}
+.field textarea{min-height:72px}
+
+/* checkboxes antecedentes */
+.check-group{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.check-item{display:flex;align-items:center;gap:5px;background:var(--gray-100);border:1.5px solid var(--gray-200);border-radius:20px;padding:5px 10px;cursor:pointer;transition:background .15s,border-color .15s;user-select:none}
+.check-item.on{background:var(--teal-l);border-color:var(--teal)}
+.check-item span{font-size:12px;font-weight:600;color:var(--gray-700)}
+.check-item.on span{color:var(--teal-d)}
+
+/* image upload */
+.img-upload-area{border:1.5px dashed var(--gray-200);border-radius:10px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:border-color .15s;background:var(--gray-50)}
+.img-upload-area:active{border-color:var(--teal)}
+.img-upload-area p{font-size:12px;color:var(--gray-400);text-align:center}
+.img-upload-btns{display:flex;gap:8px;width:100%}
+.img-btn{flex:1;border:none;border-radius:8px;padding:8px;font-size:13px;font-weight:700;cursor:pointer;background:var(--gray-100);color:var(--gray-600);transition:background .15s}
+.img-btn:active{background:var(--gray-200)}
+.img-preview{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.img-thumb{position:relative;width:80px;height:80px;border-radius:8px;overflow:hidden;border:1px solid var(--gray-200)}
+.img-thumb img{width:100%;height:100%;object-fit:cover}
+.img-thumb-del{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+
+/* visits */
+.v-list{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+.v-item{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:10px;padding:10px 12px;position:relative}
+.v-date{font-size:11px;font-weight:700;color:var(--teal);margin-bottom:6px}
+.v-field{font-size:12px;font-weight:700;color:var(--gray-600);margin-top:6px;margin-bottom:2px}
+.v-text{font-size:13px;color:var(--gray-700);line-height:1.5;white-space:pre-wrap;padding-right:24px}
+.v-imgs{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.v-img{width:64px;height:64px;border-radius:6px;object-fit:cover;border:1px solid var(--gray-200);cursor:pointer}
+.v-del{position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:13px;padding:2px 5px;border-radius:4px;line-height:1}
+.v-del:active{color:var(--red);background:#FEE2E2}
+.add-box{border:1.5px dashed var(--gray-200);border-radius:10px;padding:12px;margin-top:4px;display:flex;flex-direction:column;gap:10px}
+.add-field-lbl{font-size:11px;font-weight:700;color:var(--gray-600);margin-bottom:3px}
+.add-box textarea{width:100%;background:var(--gray-50);border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;color:var(--gray-800);font-family:inherit;resize:none;outline:none;min-height:56px;padding:8px 10px;transition:border-color .15s}
+.add-box textarea:focus{border-color:var(--teal);background:var(--white)}
+.add-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+.btn-s{border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s}
+.btn-s.p{background:var(--teal);color:#fff}
+.btn-s.p:active{background:var(--teal-d)}
+.btn-s.g{background:var(--gray-100);color:var(--gray-600)}
+.btn-s.g:active{background:var(--gray-200)}
+.sheet-foot{padding:12px 18px;border-top:1px solid var(--gray-100);display:flex;gap:10px;justify-content:flex-end;flex-shrink:0;background:var(--white)}
+.btn-save{background:var(--teal);color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s}
+.btn-save:active{background:var(--teal-d)}
+.btn-cancel{background:var(--gray-100);color:var(--gray-600);border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer}
+.btn-cancel:active{background:var(--gray-200)}
+.gdrive-info{font-size:13px;color:var(--gray-600);line-height:1.6;margin-bottom:12px}
+.gdrive-info strong{color:var(--gray-800)}
+.btn-full{width:100%;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;transition:background .15s}
+.btn-full.p{background:var(--teal);color:#fff}
+.btn-full.p:active{background:var(--teal-d)}
+.btn-full.g{background:var(--gray-100);color:var(--gray-600)}
+.btn-full.g:active{background:var(--gray-200)}
+.install-banner{margin:0 0 14px;background:var(--teal-xl);border:1.5px solid var(--teal-l);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px}
+.install-banner p{flex:1;font-size:13px;color:var(--teal-d);line-height:1.4}
+.install-banner p strong{font-weight:700}
+.install-btn{background:var(--teal);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.install-close{background:none;border:none;color:var(--teal-d);cursor:pointer;font-size:18px;flex-shrink:0;padding:0 4px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--gray-800);color:#fff;padding:10px 18px;border-radius:50px;font-size:13px;font-weight:600;z-index:999;opacity:0;pointer-events:none;transition:opacity .2s;white-space:nowrap}
+.toast.show{opacity:1}
+/* lightbox */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.lightbox.open{opacity:1;pointer-events:all}
+.lightbox img{max-width:95vw;max-height:90vh;border-radius:8px;object-fit:contain}
+.lightbox-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:50%;width:36px;height:36px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" viewBox="0 0 18 18">
+        <line x1="9" y1="2" x2="9" y2="16"/><line x1="2" y1="9" x2="16" y2="9"/>
+      </svg>
+    </div>
+    <span class="logo-name">Consultorio</span>
+  </div>
+  <input class="search" id="search" type="search" placeholder="Buscar paciente…" oninput="renderCards()">
+  <button class="sync-btn offline" id="syncBtn" onclick="openGdrive()">
+    <div class="sync-dot"></div>
+    <span id="syncTxt">Offline</span>
+  </button>
+</div>
+
+<div class="main">
+  <div class="install-banner" id="installBanner" style="display:none">
+    <p><strong>Instalar en tu tablet</strong><br>Agrégala a la pantalla de inicio para usarla sin internet.</p>
+    <button class="install-btn" onclick="doInstall()">Instalar</button>
+    <button class="install-close" onclick="dismissInstall()">×</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-lbl">Pacientes</div><div class="stat-val" id="sTotal">0</div></div>
+    <div class="stat"><div class="stat-lbl">Consultas</div><div class="stat-val" id="sVisits">0</div></div>
+    <div class="stat"><div class="stat-lbl">Última</div><div class="stat-val" id="sLast" style="font-size:16px;margin-top:6px">—</div></div>
+  </div>
+  <div class="toolbar">
+    <div class="toolbar-lbl" id="toolLbl">Pacientes</div>
+    <button class="btn-new" onclick="openNew()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" viewBox="0 0 14 14"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
+      Nuevo paciente
+    </button>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<!-- PATIENT SHEET -->
+<div class="overlay" id="ov" onclick="ovClick(event)">
+  <div class="sheet" id="sheet">
+    <div class="sheet-header">
+      <div class="sheet-title" id="shTitle">Nuevo paciente</div>
+      <button class="ico-btn danger" id="btnDel" onclick="delPatient()" style="display:none">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 16 16"><polyline points="2,5 4,5 14,5"/><path d="M13 5l-.867 9a1 1 0 0 1-1 .967H4.867a1 1 0 0 1-1-.967L3 5"/><path d="M6.5 5V3.5A.5.5 0 0 1 7 3h2a.5.5 0 0 1 .5.5V5"/></svg>
+      </button>
+      <button class="ico-btn" onclick="closeSheet()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" viewBox="0 0 14 14"><line x1="1" y1="1" x2="13" y2="13"/><line x1="13" y1="1" x2="1" y2="13"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+
+      <!-- DATOS PERSONALES -->
+      <div class="sec-title">👤 Datos personales</div>
+      <div class="row c1">
+        <div class="field"><label>Nombre completo *</label><input id="fN" type="text" placeholder="Nombre y apellidos"></div>
+      </div>
+      <div class="row c2">
+        <div class="field"><label>Fecha de nacimiento</label><input id="fNac" type="date"></div>
+        <div class="field"><label>Teléfono</label><input id="fT" type="tel" placeholder="10 dígitos"></div>
+      </div>
+
+      <!-- ANTECEDENTES -->
+      <div class="sec-title">📋 Antecedentes de enfermedades crónicas</div>
+      <div class="field">
+        <label>Selecciona los que apliquen</label>
+        <div class="check-group" id="checkGroup">
+          <div class="check-item" onclick="toggleCheck(this)" data-val="Diabetes"><span>Diabetes</span></div>
+          <div class="check-item" onclick="toggleCheck(this)" data-val="Hipertensión"><span>Hipertensión</span></div>
+          <div class="check-item" onclick="toggleCheck(this)" data-val="Colesterol"><span>Colesterol</span></div>
+          <div class="check-item" onclick="toggleCheck(this)" data-val="Triglicéridos"><span>Triglicéridos</span></div>
+          <div class="check-item" onclick="toggleCheck(this)" data-val="Cáncer"><span>Cáncer</span></div>
+          <div class="check-item" onclick="toggleCheck(this)" data-val="Pulmonares"><span>Pulmonares</span></div>
+          <div class="check-item" onclick="toggleCheck(this)" data-val="Digestivos"><span>Digestivos</span></div>
+          <div class="check-item" onclick="toggleCheck(this)" data-val="Renales"><span>Renales</span></div>
+          <div class="check-item" onclick="toggleCheck(this)" data-val="Quirúrgicos"><span>Quirúrgicos</span></div>
+        </div>
+      </div>
+      <div class="row c1" style="margin-top:10px">
+        <div class="field"><label>Notas adicionales de antecedentes</label><textarea id="fCr" placeholder="Detalles, fechas, observaciones…" style="min-height:56px"></textarea></div>
+      </div>
+
+      <!-- ALERGIAS Y MEDICAMENTOS -->
+      <div class="sec-title">💊 Alergias y medicamentos</div>
+      <div class="row c2">
+        <div class="field"><label>Alergias</label><textarea id="fAl" placeholder="Medicamentos, alimentos, otras…" style="min-height:60px"></textarea></div>
+        <div class="field"><label>Medicamentos actuales</label><textarea id="fMed" placeholder="Nombre, dosis, frecuencia…" style="min-height:60px"></textarea></div>
+      </div>
+
+      <!-- CONSULTA ACTUAL -->
+      <div class="sec-title" style="margin-top:22px">
+        🩺 Historial de consultas
+        <span id="vCount" style="font-size:11px;color:var(--gray-400);font-weight:500;text-transform:none;letter-spacing:0"></span>
+      </div>
+      <div class="v-list" id="vList"></div>
+
+      <!-- NUEVA CONSULTA -->
+      <div class="add-box">
+        <div>
+          <div class="add-field-lbl">Motivo de consulta</div>
+          <textarea id="vMotivo" placeholder="¿Por qué consulta hoy?" style="min-height:48px"></textarea>
+        </div>
+        <div class="row c2" style="margin-bottom:0">
+          <div>
+            <div class="add-field-lbl">Tiempo de enfermedad</div>
+            <textarea id="vTiempo" placeholder="Ej: 3 días, 2 semanas…" style="min-height:48px"></textarea>
+          </div>
+          <div>
+            <div class="add-field-lbl">Forma de inicio</div>
+            <textarea id="vInicio" placeholder="Súbito, gradual, tras esfuerzo…" style="min-height:48px"></textarea>
+          </div>
+        </div>
+        <div>
+          <div class="add-field-lbl">Estudios Rx / Laboratorio</div>
+          <div class="img-upload-btns" style="margin-bottom:8px">
+            <button class="img-btn" onclick="document.getElementById('fFoto').click()">📷 Tomar foto</button>
+            <button class="img-btn" onclick="document.getElementById('fGaleria').click()">🖼 Galería</button>
+          </div>
+          <input type="file" id="fFoto" accept="image/*" capture="environment" style="display:none" onchange="addImgs(event)">
+          <input type="file" id="fGaleria" accept="image/*" multiple style="display:none" onchange="addImgs(event)">
+          <div class="img-preview" id="imgPreview"></div>
+        </div>
+        <div>
+          <div class="add-field-lbl">Tratamiento</div>
+          <textarea id="vTratamiento" placeholder="Medicamentos indicados, dosis, duración…" style="min-height:56px"></textarea>
+        </div>
+        <div>
+          <div class="add-field-lbl">Seguimiento</div>
+          <textarea id="vSeguimiento" placeholder="Próxima cita, indicaciones, observaciones…" style="min-height:56px"></textarea>
+        </div>
+        <div class="add-foot">
+          <button class="btn-s g" onclick="clearVisitForm()">Limpiar</button>
+          <button class="btn-s p" onclick="addVisit()">+ Agregar consulta</button>
+        </div>
+      </div>
+
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-cancel" onclick="closeSheet()">Cancelar</button>
+      <button class="btn-save" onclick="savePatient()">Guardar paciente</button>
+    </div>
+  </div>
+</div>
+
+<!-- GDRIVE SHEET -->
+<div class="overlay" id="gOv" onclick="gOvClick(event)">
+  <div class="sheet" style="max-height:70vh">
+    <div class="sheet-header">
+      <div class="sheet-title">Respaldo y sincronización</div>
+      <button class="ico-btn" onclick="closeGdrive()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" viewBox="0 0 14 14"><line x1="1" y1="1" x2="13" y2="13"/><line x1="13" y1="1" x2="1" y2="13"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <p class="gdrive-info">Todos los datos se guardan <strong>en este dispositivo</strong>. Para respaldar en Google Drive, exporta el archivo y súbelo manualmente.</p>
+      <p class="gdrive-info" id="gStatus" style="color:var(--teal-d);font-weight:600"></p>
+      <button class="btn-full p" onclick="exportJSON()">📥 Exportar respaldo (.json)</button>
+      <button class="btn-full g" onclick="document.getElementById('fImport').click()">📤 Importar respaldo (.json)</button>
+      <input type="file" id="fImport" accept=".json" style="display:none" onchange="importJSON(event)">
+      <p style="font-size:12px;color:var(--gray-400);margin-top:12px;line-height:1.5">Exporta el respaldo y súbelo a Google Drive desde la app de Drive en tu tablet.</p>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close">×</button>
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY='consultorio_v2';
+let patients=[];
+let editId=null;
+let deferredPrompt=null;
+let pendingImgs=[];
+
+function load(){try{const r=localStorage.getItem(KEY);patients=r?JSON.parse(r):[];}catch(e){patients=[];}}
+function persist(){localStorage.setItem(KEY,JSON.stringify(patients));}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+
+// PWA
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.getElementById('installBanner').style.display='flex';});
+window.addEventListener('appinstalled',()=>{document.getElementById('installBanner').style.display='none';showToast('¡App instalada! 🎉');});
+function doInstall(){if(!deferredPrompt)return;deferredPrompt.prompt();deferredPrompt.userChoice.then(()=>{deferredPrompt=null;document.getElementById('installBanner').style.display='none';});}
+function dismissInstall(){document.getElementById('installBanner').style.display='none';}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
+
+// RENDER CARDS
+function initials(n){const w=(n||'?').trim().split(' ');return(w[0][0]+(w[1]?w[1][0]:w[0][1]||'?')).toUpperCase();}
+function fmtDate(iso){if(!iso)return'';const d=new Date(iso+'T00:00:00');return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});}
+
+function renderCards(){
+  const q=(document.getElementById('search').value||'').toLowerCase().trim();
+  const filtered=patients.filter(p=>!q||(p.nombre||'').toLowerCase().includes(q));
+  const totalV=patients.reduce((s,p)=>s+(p.visits||[]).length,0);
+  document.getElementById('sTotal').textContent=patients.length;
+  document.getElementById('sVisits').textContent=totalV;
+  const allD=patients.flatMap(p=>(p.visits||[]).map(v=>v.date)).filter(Boolean).sort();
+  document.getElementById('sLast').textContent=allD.length?new Date(allD[allD.length-1]).toLocaleDateString('es-MX',{day:'2-digit',month:'short'}):'—';
+  document.getElementById('toolLbl').textContent=q?`${filtered.length} resultado${filtered.length!==1?'s':''}`:`${patients.length} paciente${patients.length!==1?'s':''}`;
+  const grid=document.getElementById('grid');
+  if(!filtered.length){grid.innerHTML=`<div class="empty"><svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.2" color="var(--gray-200)" viewBox="0 0 48 48"><circle cx="24" cy="16" r="9"/><path d="M8 40c0-8.8 7.2-16 16-16s16 7.2 16 16"/></svg><p>${q?'Sin resultados.':'Aún no hay pacientes.<br><strong>Toca Nuevo paciente</strong> para comenzar.'}</p></div>`;return;}
+  grid.innerHTML=filtered.map(p=>{
+    const lv=(p.visits||[]).slice(-1)[0];
+    const diag=lv?(lv.motivo||lv.tratamiento||'').slice(0,70):(p.cronicos_notas||'');
+    const age=p.nacimiento?Math.floor((Date.now()-new Date(p.nacimiento+'T00:00:00'))/31557600000)+' años':'';
+    const ants=(p.antecedentes||[]).slice(0,3).join(', ');
+    return`<div class="card" onclick="openEdit('${p.id}')">
+      <div class="card-head"><div class="avatar">${initials(p.nombre)}</div>
+      <div><div class="card-name">${p.nombre||'Sin nombre'}</div>
+      <div class="card-meta">${[age,ants].filter(Boolean).join(' · ')}</div></div></div>
+      ${diag?`<div class="card-diag">${diag}</div>`:''}
+      <div class="card-foot"><div class="card-date">${lv?'Última: '+fmtDate(lv.date):(p.nacimiento?'Nac: '+fmtDate(p.nacimiento):'Sin consultas')}</div>
+      ${(p.visits||[]).length?`<div class="visits-chip">${p.visits.length} consulta${p.visits.length!==1?'s':''}</div>`:''}</div>
+    </div>`;
+  }).join('');
+}
+
+// SHEET
+function openNew(){editId=null;document.getElementById('shTitle').textContent='Nuevo paciente';document.getElementById('btnDel').style.display='none';clearForm();renderVisits([]);openSheet();}
+function openEdit(id){const p=patients.find(x=>x.id===id);if(!p)return;editId=id;document.getElementById('shTitle').textContent=p.nombre||'Paciente';document.getElementById('btnDel').style.display='';fillForm(p);renderVisits(p.visits||[]);openSheet();}
+function openSheet(){document.getElementById('ov').classList.add('open');document.getElementById('sheet').scrollTop=0;}
+function closeSheet(){document.getElementById('ov').classList.remove('open');}
+function ovClick(e){if(e.target===document.getElementById('ov'))closeSheet();}
+
+function clearForm(){
+  ['fN','fNac','fT','fCr','fAl','fMed'].forEach(id=>document.getElementById(id).value='');
+  document.querySelectorAll('.check-item').forEach(el=>el.classList.remove('on'));
+  clearVisitForm();
+}
+function fillForm(p){
+  document.getElementById('fN').value=p.nombre||'';
+  document.getElementById('fNac').value=p.nacimiento||'';
+  document.getElementById('fT').value=p.telefono||'';
+  document.getElementById('fCr').value=p.cronicos_notas||'';
+  document.getElementById('fAl').value=p.alergias||'';
+  document.getElementById('fMed').value=p.medicamentos||'';
+  const ants=p.antecedentes||[];
+  document.querySelectorAll('.check-item').forEach(el=>{
+    el.classList.toggle('on',ants.includes(el.dataset.val));
+  });
+  clearVisitForm();
+}
+function getForm(){
+  const ants=[];
+  document.querySelectorAll('.check-item.on').forEach(el=>ants.push(el.dataset.val));
+  return{
+    nombre:document.getElementById('fN').value.trim(),
+    nacimiento:document.getElementById('fNac').value,
+    telefono:document.getElementById('fT').value.trim(),
+    antecedentes:ants,
+    cronicos_notas:document.getElementById('fCr').value.trim(),
+    alergias:document.getElementById('fAl').value.trim(),
+    medicamentos:document.getElementById('fMed').value.trim(),
+  };
+}
+function toggleCheck(el){el.classList.toggle('on');}
+
+function savePatient(){
+  const d=getForm();
+  if(!d.nombre){showToast('Ingresa el nombre del paciente.');return;}
+  if(editId){const i=patients.findIndex(p=>p.id===editId);if(i>=0)patients[i]={...patients[i],...d,updatedAt:new Date().toISOString()};}
+  else patients.push({id:uid(),...d,visits:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+  persist();renderCards();closeSheet();showToast(editId?'Paciente actualizado ✓':'Paciente guardado ✓');
+}
+function delPatient(){
+  if(!editId)return;
+  const p=patients.find(x=>x.id===editId);
+  if(!confirm(`¿Eliminar a ${p.nombre}?`))return;
+  patients=patients.filter(x=>x.id!==editId);
+  persist();renderCards();closeSheet();showToast('Paciente eliminado.');
+}
+
+// IMAGES
+function addImgs(e){
+  const files=Array.from(e.target.files);
+  files.forEach(file=>{
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      pendingImgs.push(ev.target.result);
+      renderPendingImgs();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value='';
+}
+function renderPendingImgs(){
+  const preview=document.getElementById('imgPreview');
+  preview.innerHTML=pendingImgs.map((src,i)=>`<div class="img-thumb"><img src="${src}" onclick="openLightbox('${src}')"><button class="img-thumb-del" onclick="removeImg(${i})">×</button></div>`).join('');
+}
+function removeImg(i){pendingImgs.splice(i,1);renderPendingImgs();}
+
+// VISITS
+function esc(t){return(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function renderVisits(visits){
+  const el=document.getElementById('vList');
+  const cnt=document.getElementById('vCount');
+  cnt.textContent=visits.length?`(${visits.length})`:'';
+  if(!visits.length){el.innerHTML='<div style="font-size:13px;color:var(--gray-400);padding:2px 0">Sin consultas registradas aún.</div>';return;}
+  el.innerHTML=[...visits].reverse().map((v,ri)=>{
+    const i=visits.length-1-ri;
+    const fields=[
+      v.motivo?`<div class="v-field">Motivo</div><div class="v-text">${esc(v.motivo)}</div>`:'',
+      v.tiempo?`<div class="v-field">Tiempo de enfermedad</div><div class="v-text">${esc(v.tiempo)}</div>`:'',
+      v.inicio?`<div class="v-field">Forma de inicio</div><div class="v-text">${esc(v.inicio)}</div>`:'',
+      v.tratamiento?`<div class="v-field">Tratamiento</div><div class="v-text">${esc(v.tratamiento)}</div>`:'',
+      v.seguimiento?`<div class="v-field">Seguimiento</div><div class="v-text">${esc(v.seguimiento)}</div>`:'',
+      (v.imgs&&v.imgs.length)?`<div class="v-field">Estudios / Rx</div><div class="v-imgs">${v.imgs.map(src=>`<img class="v-img" src="${src}" onclick="openLightbox('${src}')">`).join('')}</div>`:'',
+    ].filter(Boolean).join('');
+    return`<div class="v-item"><div class="v-date">${fmtDate(v.date)}${v.time?' · '+v.time:''}</div>${fields}<button class="v-del" onclick="removeVisit(${i})">✕</button></div>`;
+  }).join('');
+}
+function clearVisitForm(){
+  ['vMotivo','vTiempo','vInicio','vTratamiento','vSeguimiento'].forEach(id=>document.getElementById(id).value='');
+  pendingImgs=[];
+  document.getElementById('imgPreview').innerHTML='';
+}
+function addVisit(){
+  const motivo=document.getElementById('vMotivo').value.trim();
+  const tiempo=document.getElementById('vTiempo').value.trim();
+  const inicio=document.getElementById('vInicio').value.trim();
+  const tratamiento=document.getElementById('vTratamiento').value.trim();
+  const seguimiento=document.getElementById('vSeguimiento').value.trim();
+  if(!motivo&&!tratamiento&&!pendingImgs.length){showToast('Llena al menos el motivo o tratamiento.');return;}
+  if(!editId){showToast('Primero guarda el paciente.');return;}
+  const p=patients.find(x=>x.id===editId);if(!p)return;
+  const now=new Date();
+  p.visits=p.visits||[];
+  p.visits.push({
+    date:now.toISOString().slice(0,10),
+    time:now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),
+    motivo,tiempo,inicio,tratamiento,seguimiento,
+    imgs:[...pendingImgs]
+  });
+  p.updatedAt=now.toISOString();
+  persist();renderVisits(p.visits);renderCards();clearVisitForm();showToast('Consulta agregada ✓');
+}
+function removeVisit(idx){
+  if(!editId)return;
+  const p=patients.find(x=>x.id===editId);
+  if(!p||!confirm('¿Eliminar esta consulta?'))return;
+  p.visits.splice(idx,1);p.updatedAt=new Date().toISOString();
+  persist();renderVisits(p.visits);renderCards();
+}
+
+// LIGHTBOX
+function openLightbox(src){document.getElementById('lightboxImg').src=src;document.getElementById('lightbox').classList.add('open');}
+function closeLightbox(){document.getElementById('lightbox').classList.remove('open');}
+
+// SYNC
+function updateSync(){
+  const online=navigator.onLine;
+  const b=document.getElementById('syncBtn');
+  b.className='sync-btn '+(online?'online':'offline');
+  document.getElementById('syncTxt').textContent=online?'En línea':'Offline';
+  const s=document.getElementById('gStatus');
+  if(s)s.textContent=online?'✅ Conectado a internet':'⚠️ Sin conexión';
+}
+window.addEventListener('online',updateSync);
+window.addEventListener('offline',updateSync);
+
+// EXPORT / IMPORT
+function exportJSON(){
+  const blob=new Blob([JSON.stringify({exported:new Date().toISOString(),patients},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='consultorio_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  showToast('Respaldo exportado ✓');
+}
+function importJSON(e){
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      if(!Array.isArray(d.patients)){showToast('Archivo inválido.');return;}
+      if(!confirm(`¿Importar ${d.patients.length} pacientes? Reemplazará los datos actuales.`))return;
+      patients=d.patients;persist();renderCards();closeGdrive();showToast(`${d.patients.length} pacientes importados ✓`);
+    }catch{showToast('No se pudo leer el archivo.');}
+  };
+  r.readAsText(file);e.target.value='';
+}
+function openGdrive(){updateSync();document.getElementById('gOv').classList.add('open');}
+function closeGdrive(){document.getElementById('gOv').classList.remove('open');}
+function gOvClick(e){if(e.target===document.getElementById('gOv'))closeGdrive();}
+
+// TOAST
+let toastT;
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600);}
+
+load();renderCards();updateSync();
+</script>
+</body>
+</html>
