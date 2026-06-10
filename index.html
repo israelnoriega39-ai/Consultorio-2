@@ -239,50 +239,51 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="field"><label>Medicamentos actuales</label><textarea id="fMed" placeholder="Nombre, dosis, frecuencia…" style="min-height:60px"></textarea></div>
       </div>
 
-      <!-- CONSULTA ACTUAL -->
-      <div class="sec-title" style="margin-top:22px">
-        🩺 Historial de consultas
-        <span id="vCount" style="font-size:11px;color:var(--gray-400);font-weight:500;text-transform:none;letter-spacing:0"></span>
-      </div>
-      <div class="v-list" id="vList"></div>
+      <!-- CONSULTAS — solo visible al editar paciente existente -->
+      <div id="visitSection" style="display:none">
+        <div class="sec-title" style="margin-top:22px">
+          🩺 Historial de consultas
+          <span id="vCount" style="font-size:11px;color:var(--gray-400);font-weight:500;text-transform:none;letter-spacing:0"></span>
+        </div>
+        <div class="v-list" id="vList"></div>
 
-      <!-- NUEVA CONSULTA -->
-      <div class="add-box">
-        <div>
-          <div class="add-field-lbl">Motivo de consulta</div>
-          <textarea id="vMotivo" placeholder="¿Por qué consulta hoy?" style="min-height:48px"></textarea>
-        </div>
-        <div class="row c2" style="margin-bottom:0">
+        <div class="add-box">
           <div>
-            <div class="add-field-lbl">Tiempo de enfermedad</div>
-            <textarea id="vTiempo" placeholder="Ej: 3 días, 2 semanas…" style="min-height:48px"></textarea>
+            <div class="add-field-lbl">Motivo de consulta</div>
+            <textarea id="vMotivo" placeholder="¿Por qué consulta hoy?" style="min-height:48px"></textarea>
+          </div>
+          <div class="row c2" style="margin-bottom:0">
+            <div>
+              <div class="add-field-lbl">Tiempo de enfermedad</div>
+              <textarea id="vTiempo" placeholder="Ej: 3 días, 2 semanas…" style="min-height:48px"></textarea>
+            </div>
+            <div>
+              <div class="add-field-lbl">Forma de inicio</div>
+              <textarea id="vInicio" placeholder="Súbito, gradual, tras esfuerzo…" style="min-height:48px"></textarea>
+            </div>
           </div>
           <div>
-            <div class="add-field-lbl">Forma de inicio</div>
-            <textarea id="vInicio" placeholder="Súbito, gradual, tras esfuerzo…" style="min-height:48px"></textarea>
+            <div class="add-field-lbl">Estudios Rx / Laboratorio</div>
+            <div class="img-upload-btns" style="margin-bottom:8px">
+              <button class="img-btn" onclick="document.getElementById('fFoto').click()">📷 Tomar foto</button>
+              <button class="img-btn" onclick="document.getElementById('fGaleria').click()">🖼 Galería</button>
+            </div>
+            <input type="file" id="fFoto" accept="image/*" capture="environment" style="display:none" onchange="addImgs(event)">
+            <input type="file" id="fGaleria" accept="image/*" multiple style="display:none" onchange="addImgs(event)">
+            <div class="img-preview" id="imgPreview"></div>
           </div>
-        </div>
-        <div>
-          <div class="add-field-lbl">Estudios Rx / Laboratorio</div>
-          <div class="img-upload-btns" style="margin-bottom:8px">
-            <button class="img-btn" onclick="document.getElementById('fFoto').click()">📷 Tomar foto</button>
-            <button class="img-btn" onclick="document.getElementById('fGaleria').click()">🖼 Galería</button>
+          <div>
+            <div class="add-field-lbl">Tratamiento</div>
+            <textarea id="vTratamiento" placeholder="Medicamentos indicados, dosis, duración…" style="min-height:56px"></textarea>
           </div>
-          <input type="file" id="fFoto" accept="image/*" capture="environment" style="display:none" onchange="addImgs(event)">
-          <input type="file" id="fGaleria" accept="image/*" multiple style="display:none" onchange="addImgs(event)">
-          <div class="img-preview" id="imgPreview"></div>
-        </div>
-        <div>
-          <div class="add-field-lbl">Tratamiento</div>
-          <textarea id="vTratamiento" placeholder="Medicamentos indicados, dosis, duración…" style="min-height:56px"></textarea>
-        </div>
-        <div>
-          <div class="add-field-lbl">Seguimiento</div>
-          <textarea id="vSeguimiento" placeholder="Próxima cita, indicaciones, observaciones…" style="min-height:56px"></textarea>
-        </div>
-        <div class="add-foot">
-          <button class="btn-s g" onclick="clearVisitForm()">Limpiar</button>
-          <button class="btn-s p" onclick="addVisit()">+ Agregar consulta</button>
+          <div>
+            <div class="add-field-lbl">Seguimiento</div>
+            <textarea id="vSeguimiento" placeholder="Próxima cita, indicaciones, observaciones…" style="min-height:56px"></textarea>
+          </div>
+          <div class="add-foot">
+            <button class="btn-s g" onclick="clearVisitForm()">Limpiar</button>
+            <button class="btn-s p" onclick="addVisit()">+ Agregar consulta</button>
+          </div>
         </div>
       </div>
 
@@ -372,8 +373,8 @@ function renderCards(){
 }
 
 // SHEET
-function openNew(){editId=null;document.getElementById('shTitle').textContent='Nuevo paciente';document.getElementById('btnDel').style.display='none';clearForm();renderVisits([]);openSheet();}
-function openEdit(id){const p=patients.find(x=>x.id===id);if(!p)return;editId=id;document.getElementById('shTitle').textContent=p.nombre||'Paciente';document.getElementById('btnDel').style.display='';fillForm(p);renderVisits(p.visits||[]);openSheet();}
+function openNew(){editId=null;document.getElementById('shTitle').textContent='Nuevo paciente';document.getElementById('btnDel').style.display='none';document.getElementById('visitSection').style.display='none';clearForm();openSheet();}
+function openEdit(id){const p=patients.find(x=>x.id===id);if(!p)return;editId=id;document.getElementById('shTitle').textContent=p.nombre||'Paciente';document.getElementById('btnDel').style.display='';document.getElementById('visitSection').style.display='';fillForm(p);renderVisits(p.visits||[]);openSheet();}
 function openSheet(){document.getElementById('ov').classList.add('open');document.getElementById('sheet').scrollTop=0;}
 function closeSheet(){document.getElementById('ov').classList.remove('open');}
 function ovClick(e){if(e.target===document.getElementById('ov'))closeSheet();}
