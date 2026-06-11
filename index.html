@@ -407,12 +407,24 @@ window.doLogin = async () => {
   if(navigator.onLine) {
     // con internet: verifica con Firebase y guarda hash local
     try {
-      await signInWithEmailAndPassword(auth, 'kaniasantiago99@gmail.com', pass);
+      const loginPromise = signInWithEmailAndPassword(auth, 'kaniasantiago99@gmail.com', pass);
+      const timeoutPromise = new Promise((_,reject) => setTimeout(()=>reject(new Error('timeout')), 6000));
+      await Promise.race([loginPromise, timeoutPromise]);
       const h = await hashPass(pass);
       localStorage.setItem(HASH_KEY, h);
       showApp();
     } catch(e) {
-      err.textContent = 'Contraseña incorrecta.';
+      if(e.message === 'timeout') {
+        // si hay timeout, intenta con hash local si existe
+        const savedHash = localStorage.getItem(HASH_KEY);
+        if(savedHash) {
+          const h = await hashPass(pass);
+          if(h === savedHash) { showApp(); return; }
+        }
+        err.textContent = 'Sin respuesta del servidor. Revisa tu conexión.';
+      } else {
+        err.textContent = 'Contraseña incorrecta.';
+      }
       btn.disabled = false; btn.textContent = 'Entrar';
     }
   } else {
