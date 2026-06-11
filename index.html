@@ -435,9 +435,10 @@ window.doLogin = async () => {
 
 function showApp() {
   document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('loadingScreen').style.display = 'none';
   document.getElementById('loginPass').value = '';
-  const app = document.getElementById('appContent');
-  app.style.display = 'flex';
+  const appEl = document.getElementById('appContent');
+  appEl.style.cssText = 'display:flex;flex:1;flex-direction:column;height:100%';
   startListener();
   updateSync();
 }
