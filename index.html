@@ -379,14 +379,9 @@ window.doInstall    = () => { if(!deferredPrompt) return; deferredPrompt.prompt(
 window.dismissInstall = () => document.getElementById('installBanner').style.display = 'none';
 if('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 
-// ── AUTH STATE ────────────────────────────────────────────
-// Siempre muestra login — nunca sesión automática
-onAuthStateChanged(auth, user => {
-  if(user) signOut(auth); // cierra cualquier sesión guardada
-  document.getElementById('loadingScreen').style.display = 'none';
-  document.getElementById('loginScreen').style.display   = 'flex';
-  document.getElementById('appContent').style.display    = 'none';
-});
+// sesión manejada manualmente — no usamos onAuthStateChanged
+document.getElementById('loadingScreen').style.display = 'none';
+document.getElementById('loginScreen').style.display   = 'flex';
 
 // hash simple para verificación offline
 async function hashPass(pass) {
