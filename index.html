@@ -403,45 +403,38 @@ window.doLogin = async () => {
   btn.disabled = true; btn.textContent = 'Verificando…'; err.textContent = '';
 
   const HASH_KEY = 'consultorio_ph';
+  const h = await hashPass(pass);
+  const savedHash = localStorage.getItem(HASH_KEY);
 
-  if(navigator.onLine) {
-    // con internet: verifica con Firebase y guarda hash local
-    try {
-      const loginPromise = signInWithEmailAndPassword(auth, 'kaniasantiago99@gmail.com', pass);
-      const timeoutPromise = new Promise((_,reject) => setTimeout(()=>reject(new Error('timeout')), 6000));
-      await Promise.race([loginPromise, timeoutPromise]);
-      const h = await hashPass(pass);
-      localStorage.setItem(HASH_KEY, h);
-      showApp();
-    } catch(e) {
-      if(e.message === 'timeout') {
-        // si hay timeout, intenta con hash local si existe
-        const savedHash = localStorage.getItem(HASH_KEY);
-        if(savedHash) {
-          const h = await hashPass(pass);
-          if(h === savedHash) { showApp(); return; }
-        }
-        err.textContent = 'Sin respuesta del servidor. Revisa tu conexión.';
-      } else {
-        err.textContent = 'Contraseña incorrecta.';
-      }
-      btn.disabled = false; btn.textContent = 'Entrar';
-    }
-  } else {
-    // sin internet: verifica contra hash guardado
-    const savedHash = localStorage.getItem(HASH_KEY);
-    if(!savedHash) {
-      err.textContent = 'Sin internet. Inicia sesión con conexión al menos una vez.';
-      btn.disabled = false; btn.textContent = 'Entrar';
-      return;
-    }
-    const h = await hashPass(pass);
+  if(savedHash) {
+    // hay hash guardado — verifica localmente primero
     if(h === savedHash) {
+      // contraseña correcta — entra y sincroniza Firebase en segundo plano
       showApp();
+      signInWithEmailAndPassword(auth, 'kaniasantiago99@gmail.com', pass).catch(()=>{});
+      return;
     } else {
       err.textContent = 'Contraseña incorrecta.';
       btn.disabled = false; btn.textContent = 'Entrar';
+      return;
     }
+  }
+
+  // primera vez — necesita Firebase para guardar el hash
+  btn.textContent = 'Conectando…';
+  try {
+    const loginPromise   = signInWithEmailAndPassword(auth, 'kaniasantiago99@gmail.com', pass);
+    const timeoutPromise = new Promise((_,reject) => setTimeout(()=>reject(new Error('timeout')), 8000));
+    await Promise.race([loginPromise, timeoutPromise]);
+    localStorage.setItem(HASH_KEY, h);
+    showApp();
+  } catch(e) {
+    if(e.message === 'timeout') {
+      err.textContent = 'Sin conexión. Necesitas internet la primera vez.';
+    } else {
+      err.textContent = 'Contraseña incorrecta.';
+    }
+    btn.disabled = false; btn.textContent = 'Entrar';
   }
 };
 
