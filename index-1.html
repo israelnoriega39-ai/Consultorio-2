@@ -457,28 +457,31 @@ window.doLogout = () => {
 // ── FIRESTORE LISTENER ────────────────────────────────────
 function startListener() {
   if(unsubscribe) unsubscribe();
-  // { includeMetadataChanges: false } — usa caché de Firestore offline automáticamente
+
+  // carga caché local PRIMERO antes de cualquier cosa
+  try {
+    const cached = localStorage.getItem('consultorio_cache');
+    if(cached) {
+      patients = JSON.parse(cached);
+      renderCards();
+    }
+  } catch(e){}
+
+  // luego escucha Firestore — solo actualiza si trae datos reales
   unsubscribe = onSnapshot(COL,
     { includeMetadataChanges: false },
     snap => {
-      patients = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      // guarda copia local por si acaso
-      try { localStorage.setItem('consultorio_cache', JSON.stringify(patients)); } catch(e){}
-      renderCards();
+      if(snap.docs.length > 0 || navigator.onLine) {
+        patients = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        try { localStorage.setItem('consultorio_cache', JSON.stringify(patients)); } catch(e){}
+        renderCards();
+      }
     },
     err => {
-      // sin internet — carga desde caché local
-      try {
-        const cached = localStorage.getItem('consultorio_cache');
-        if(cached) { patients = JSON.parse(cached); renderCards(); }
-      } catch(e){}
+      // error de red — ya tenemos el caché cargado, no hacemos nada
+      console.log('Firestore offline, usando caché local');
     }
   );
-  // carga caché inmediatamente mientras llegan datos de Firestore
-  try {
-    const cached = localStorage.getItem('consultorio_cache');
-    if(cached && patients.length === 0) { patients = JSON.parse(cached); renderCards(); }
-  } catch(e){}
 }
 
 // ── SYNC BADGE ────────────────────────────────────────────
