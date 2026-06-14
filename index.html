@@ -457,10 +457,31 @@ window.doLogout = () => {
 // ── FIRESTORE LISTENER ────────────────────────────────────
 function startListener() {
   if(unsubscribe) unsubscribe();
-  unsubscribe = onSnapshot(COL, snap => {
-    patients = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    renderCards();
-  });
+
+  // carga caché local PRIMERO antes de cualquier cosa
+  try {
+    const cached = localStorage.getItem('consultorio_cache');
+    if(cached) {
+      patients = JSON.parse(cached);
+      renderCards();
+    }
+  } catch(e){}
+
+  // luego escucha Firestore — solo actualiza si trae datos reales
+  unsubscribe = onSnapshot(COL,
+    { includeMetadataChanges: false },
+    snap => {
+      if(snap.docs.length > 0 || navigator.onLine) {
+        patients = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        try { localStorage.setItem('consultorio_cache', JSON.stringify(patients)); } catch(e){}
+        renderCards();
+      }
+    },
+    err => {
+      // error de red — ya tenemos el caché cargado, no hacemos nada
+      console.log('Firestore offline, usando caché local');
+    }
+  );
 }
 
 // ── SYNC BADGE ────────────────────────────────────────────
@@ -534,17 +555,28 @@ window.toggleCheck = el => el.classList.toggle('on');
 window.savePatient = async () => {
   const d = getForm();
   if(!d.nombre) { showToast('Ingresa el nombre del paciente.'); return; }
-  showToast('Guardando…');
   try {
     if(editId) {
       const p = patients.find(x=>x.id===editId);
-      await setDoc(doc(db,'patients',editId), {...p,...d, updatedAt:new Date().toISOString()});
+      const updated = {...p,...d, updatedAt:new Date().toISOString()};
+      setDoc(doc(db,'patients',editId), updated);
+      // actualiza localmente de inmediato
+      const idx = patients.findIndex(x=>x.id===editId);
+      if(idx>=0) patients[idx] = updated;
     } else {
       const id = Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-      await setDoc(doc(db,'patients',id), {...d, visits:[], createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()});
+      const newP = {...d, id, visits:[], createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()};
+      setDoc(doc(db,'patients',id), newP);
+      patients.push(newP);
     }
-    window.closeSheet(); showToast(editId?'Paciente actualizado ✓':'Paciente guardado ✓');
-  } catch(e) { showToast('Error al guardar.'); }
+    try { localStorage.setItem('consultorio_cache', JSON.stringify(patients)); } catch(e){}
+    renderCards();
+    window.closeSheet();
+    showToast(editId?'Paciente actualizado ✓':'Paciente guardado ✓');
+  } catch(e) {
+    window.closeSheet();
+    showToast('Guardado localmente ✓');
+  }
 };
 
 window.delPatient = async () => {
@@ -580,8 +612,16 @@ window.addVisit = async () => {
   const p=patients.find(x=>x.id===editId); if(!p) return;
   const now=new Date();
   const newVisit={date:now.toISOString().slice(0,10),time:now.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),motivo,tiempo,inicio,estudios,tratamiento,seguimiento};
-  try { await setDoc(doc(db,'patients',editId),{...p,visits:[...(p.visits||[]),newVisit],updatedAt:now.toISOString()}); renderVisits([...(p.visits||[]),newVisit]); window.clearVisitForm(); showToast('Consulta guardada ✓'); }
-  catch(e){ showToast('Error al guardar consulta.'); }
+  const updatedVisits=[...(p.visits||[]),newVisit];
+  // actualiza localmente de inmediato
+  const idx=patients.findIndex(x=>x.id===editId);
+  if(idx>=0) patients[idx]={...p, visits:updatedVisits, updatedAt:now.toISOString()};
+  try { localStorage.setItem('consultorio_cache', JSON.stringify(patients)); } catch(e){}
+  setDoc(doc(db,'patients',editId),{...p,visits:updatedVisits,updatedAt:now.toISOString()}).catch(()=>{});
+  renderVisits(updatedVisits);
+  renderCards();
+  window.clearVisitForm();
+  showToast('Consulta guardada ✓');
 };
 
 window.removeVisit = async idx => {
